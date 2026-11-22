@@ -59,6 +59,9 @@ internal sealed class FakeCajaRepository : ICajaRepository
 
     public bool ExisteEnSucursal(int sucursalId, int cajaId) =>
         Cajas.Exists(caja => caja.Id == cajaId && caja.SucursalId == sucursalId);
+
+    public IReadOnlyList<Caja> ObtenerPorSucursal(int sucursalId) =>
+        Cajas.Where(caja => caja.SucursalId == sucursalId).OrderBy(caja => caja.Id).ToList();
 }
 
 internal sealed class FakeVentaRepository : IVentaRepository

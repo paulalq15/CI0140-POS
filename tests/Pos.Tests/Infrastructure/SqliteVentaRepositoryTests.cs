@@ -184,6 +184,15 @@ public sealed class SqliteCajaRepositoryTests : IDisposable
     }
 
     [Fact]
+    public void ObtenerPorSucursal_DevuelveSoloLasCajasDeLaSucursalEnOrden()
+    {
+        var cajas = _repositorio.ObtenerPorSucursal(1);
+
+        Assert.Equal([(1, "Caja 1"), (2, "Caja 2")], cajas.Select(caja => (caja.Id, caja.Nombre)));
+        Assert.All(cajas, caja => Assert.Equal(1, caja.SucursalId));
+    }
+
+    [Fact]
     public void Constructor_FactoryNula_LanzaArgumentNullException()
     {
         Assert.Throws<ArgumentNullException>(() => new SqliteCajaRepository(null!));

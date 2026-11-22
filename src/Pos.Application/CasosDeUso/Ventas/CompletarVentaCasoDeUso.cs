@@ -43,6 +43,8 @@ public sealed class CompletarVentaCasoDeUso(
         return SumarSubtotales(PrepararDetalles(sucursalId, productos));
     }
 
+    public IReadOnlyList<Caja> ObtenerCajasDisponibles(int sucursalId) => _cajaRepository.ObtenerPorSucursal(sucursalId);
+
     public void ValidarCaja(int sucursalId, int cajaId)
     {
         if (cajaId <= 0)
@@ -52,7 +54,7 @@ public sealed class CompletarVentaCasoDeUso(
 
         if (!_cajaRepository.ExisteEnSucursal(sucursalId, cajaId))
         {
-            throw new ValidacionException(nameof(Venta.CajaId), "La caja indicada no existe en esta sucursal. Digite el número de una caja de la sucursal seleccionada.");
+            throw new ValidacionException(nameof(Venta.CajaId), "La caja indicada no existe en esta sucursal. Elija una caja de la lista.");
         }
     }
 
