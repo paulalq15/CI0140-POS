@@ -1,0 +1,58 @@
+root = true
+
+[*]
+charset = utf-8
+indent_style = space
+indent_size = 4
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.{csproj,props,slnx,xml,runsettings,yml,yaml,json}]
+indent_size = 2
+
+[*.cs]
+# ---------- Estilo general ----------
+csharp_style_namespace_declarations = file_scoped:warning
+csharp_prefer_braces = true:warning
+dotnet_sort_system_directives_first = true
+csharp_style_var_when_type_is_apparent = true:suggestion
+dotnet_style_readonly_field = true:warning
+dotnet_diagnostic.IDE0005.severity = warning   # usings innecesarios
+dotnet_diagnostic.IDE0161.severity = warning   # namespaces file-scoped
+
+# ---------- Convenciones de nomenclatura (Plan de Calidad 5.2.1) ----------
+# Interfaces: empiezan con I y usan PascalCase
+dotnet_naming_rule.interfaces_con_i.severity = warning
+dotnet_naming_rule.interfaces_con_i.symbols = interfaces
+dotnet_naming_rule.interfaces_con_i.style = prefijo_i
+dotnet_naming_symbols.interfaces.applicable_kinds = interface
+dotnet_naming_style.prefijo_i.required_prefix = I
+dotnet_naming_style.prefijo_i.capitalization = pascal_case
+
+# Clases, structs, enums, métodos y propiedades: PascalCase
+dotnet_naming_rule.tipos_y_miembros_pascal.severity = warning
+dotnet_naming_rule.tipos_y_miembros_pascal.symbols = tipos_y_miembros
+dotnet_naming_rule.tipos_y_miembros_pascal.style = pascal
+dotnet_naming_symbols.tipos_y_miembros.applicable_kinds = class, struct, enum, method, property, event
+dotnet_naming_style.pascal.capitalization = pascal_case
+
+# Campos privados: _camelCase
+dotnet_naming_rule.campos_privados.severity = warning
+dotnet_naming_rule.campos_privados.symbols = campos_privados
+dotnet_naming_rule.campos_privados.style = guion_camel
+dotnet_naming_symbols.campos_privados.applicable_kinds = field
+dotnet_naming_symbols.campos_privados.applicable_accessibilities = private
+dotnet_naming_style.guion_camel.required_prefix = _
+dotnet_naming_style.guion_camel.capitalization = camel_case
+
+# Parámetros y variables locales: camelCase
+dotnet_naming_rule.parametros_y_locales.severity = warning
+dotnet_naming_rule.parametros_y_locales.symbols = parametros_y_locales
+dotnet_naming_rule.parametros_y_locales.style = camel
+dotnet_naming_symbols.parametros_y_locales.applicable_kinds = parameter, local
+dotnet_naming_style.camel.capitalization = camel_case
+
+# ---------- Pruebas ----------
+# En las pruebas se permite Metodo_Escenario_ResultadoEsperado (guiones bajos)
+[tests/**.cs]
+dotnet_diagnostic.CA1707.severity = none

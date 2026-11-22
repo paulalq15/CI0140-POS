@@ -1,0 +1,19 @@
+<Project>
+  <!-- Configuración común para todos los proyectos de la solución -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+
+    <!-- Análisis estático con los analizadores Roslyn del SDK de .NET (RNF-18) -->
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+    <!-- Aplica las reglas de estilo y nomenclatura de .editorconfig al compilar (RNF-14) -->
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <!-- Necesario para que IDE0005 (usings innecesarios) se revise al compilar -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <!-- No exigir comentarios XML en todos los miembros públicos -->
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+</Project>
