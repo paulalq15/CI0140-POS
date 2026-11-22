@@ -53,6 +53,12 @@ public sealed class SqliteProductoRepositoryTests : IDisposable
         Assert.Equal(new[] { "Agua 600 ml", "Croissant", "Té frío" }, nombres);
     }
 
+    [Fact]
+    public void ExisteNombre_NombreNulo_DevuelveFalse()
+    {
+        Assert.False(_repositorio.ExisteNombre(null!));
+    }
+
     [Theory]
     [InlineData("Croissant")]
     [InlineData("croissant")]
