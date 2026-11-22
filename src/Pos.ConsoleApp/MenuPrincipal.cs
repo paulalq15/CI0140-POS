@@ -134,12 +134,7 @@ public sealed class MenuPrincipal
         Console.WriteLine();
         Console.WriteLine("--- Inventario por sucursal ---");
 
-        Console.WriteLine("Sucursales:");
-        foreach (var sucursal in _consultarInventario.ObtenerSucursales())
-        {
-            Console.WriteLine($"  {sucursal.Id}. {sucursal.Nombre}");
-        }
-
+        MostrarSucursales();
         var sucursalId = LectorConsola.LeerEntero("Número de sucursal: ");
         var items = _consultarInventario.Ejecutar(sucursalId);
 
@@ -150,17 +145,45 @@ public sealed class MenuPrincipal
         }
     }
 
+    private void MostrarSucursales()
+    {
+        Console.WriteLine("Sucursales:");
+        foreach (var sucursal in _consultarInventario.ObtenerSucursales())
+        {
+            Console.WriteLine($"  {sucursal.Id}. {sucursal.Nombre}");
+        }
+    }
+
+    private void MostrarCajasDisponibles(int sucursalId)
+    {
+        var cajas = _completarVenta.ObtenerCajasDisponibles(sucursalId);
+        if (cajas.Count == 0)
+        {
+            Console.WriteLine("Esta sucursal no tiene cajas registradas.");
+            return;
+        }
+
+        Console.WriteLine("Cajas disponibles:");
+        foreach (var caja in cajas)
+        {
+            Console.WriteLine($"  {caja.Id}. {caja.Nombre}");
+        }
+    }
+
     private void CompletarVenta()
     {
         Console.WriteLine();
         Console.WriteLine("--- Venta en efectivo ---");
 
-        var sucursalId = LectorConsola.LeerEntero("Número de sucursal: ");
-        _completarVenta.ValidarSucursal(sucursalId);
-        var cajaId = LeerCajaParaVenta(sucursalId);
-        if (cajaId is null)
+        if (LeerSeleccionParaVenta("Número de sucursal (0 para cancelar la venta): ",
+            _completarVenta.ValidarSucursal, MostrarSucursales) is not int sucursalId)
         {
-            Console.WriteLine("Venta cancelada.");
+            return;
+        }
+
+        if (LeerSeleccionParaVenta("Número de caja (0 para cancelar la venta): ",
+            id => _completarVenta.ValidarCaja(sucursalId, id), () => MostrarCajasDisponibles(sucursalId)) is not int cajaId)
+        {
             return;
         }
 
@@ -171,25 +194,43 @@ public sealed class MenuPrincipal
             return;
         }
 
-        var monto = LectorConsola.LeerDecimal("Efectivo recibido (₡): ");
-        var venta = _completarVenta.Ejecutar(new CompletarVentaComando(sucursalId, cajaId.Value, productos, monto));
-        Console.WriteLine($"Venta {venta.Id} registrada. Total: {FormatearImporte(venta.Total)}. Vuelto: {FormatearImporte(venta.Vuelto)}.");
+        CobrarVenta(sucursalId, cajaId, productos);
     }
 
-    private int? LeerCajaParaVenta(int sucursalId)
+    private void CobrarVenta(int sucursalId, int cajaId, IReadOnlyList<ProductoParaVenta> productos)
     {
         while (true)
         {
-            var cajaId = LectorConsola.LeerEntero("Número de caja (0 para cancelar): ");
-            if (cajaId == 0)
+            var monto = LectorConsola.LeerDecimal("Efectivo recibido (₡): ");
+            try
             {
+                var venta = _completarVenta.Ejecutar(new CompletarVentaComando(sucursalId, cajaId, productos, monto));
+                Console.WriteLine($"Venta {venta.Id} registrada. Total: {FormatearImporte(venta.Total)}. Vuelto: {FormatearImporte(venta.Vuelto)}.");
+                return;
+            }
+            catch (ValidacionException ex) when (ex.Campo == nameof(CompletarVentaComando.MontoRecibido))
+            {
+                Console.WriteLine($"Error: {ex.Message}");
+            }
+        }
+    }
+
+    private static int? LeerSeleccionParaVenta(string pregunta, Action<int> validar, Action? mostrarOpciones = null)
+    {
+        while (true)
+        {
+            mostrarOpciones?.Invoke();
+            var id = LectorConsola.LeerEntero(pregunta);
+            if (id == 0)
+            {
+                Console.WriteLine("Venta cancelada.");
                 return null;
             }
 
             try
             {
-                _completarVenta.ValidarCaja(sucursalId, cajaId);
-                return cajaId;
+                validar(id);
+                return id;
             }
             catch (ValidacionException ex)
             {
