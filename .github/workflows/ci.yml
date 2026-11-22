@@ -1,0 +1,53 @@
+name: CI
+
+# Se ejecuta en cada PR hacia main y en cada integración a main (Etapa 2, sección 2.3)
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  build-test:
+    name: Compilar, analizar y probar
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Obtener el código
+        uses: actions/checkout@v4
+
+      - name: Instalar .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restaurar dependencias
+        run: dotnet restore PosCafeteria.slnx
+
+      # Los analizadores Roslyn se ejecutan durante la compilación
+      - name: Compilar (incluye análisis estático Roslyn)
+        run: dotnet build PosCafeteria.slnx --no-restore -c Release
+
+      - name: Ejecutar pruebas con cobertura
+        run: >
+          dotnet test PosCafeteria.slnx --no-build -c Release
+          --settings coverlet.runsettings
+          --collect:"XPlat Code Coverage"
+          --results-directory ./TestResults
+          --logger "trx;LogFileName=resultados.trx"
+
+      - name: Generar reporte de cobertura
+        if: always()
+        run: |
+          dotnet tool install --global dotnet-reportgenerator-globaltool
+          reportgenerator -reports:"TestResults/**/coverage.cobertura.xml" -targetdir:"coverage-report" -reporttypes:"Html;MarkdownSummaryGithub"
+          cat coverage-report/SummaryGithub.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Publicar reporte de cobertura y resultados
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reporte-pruebas
+          path: |
+            coverage-report
+            TestResults/**/*.trx
