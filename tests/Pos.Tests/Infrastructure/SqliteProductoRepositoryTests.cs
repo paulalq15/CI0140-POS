@@ -74,6 +74,30 @@ public sealed class SqliteProductoRepositoryTests : IDisposable
         Assert.False(_repositorio.ExisteNombre("Empanada"));
     }
 
+    [Theory]
+    [InlineData("TÉ FRÍO")]
+    [InlineData("té frío")]
+    [InlineData("  Té Frío  ")]
+    public void ExisteNombre_NombreConTildeEnOtrasMayusculas_DevuelveTrue(string nombre)
+    {
+        Assert.True(_repositorio.ExisteNombre(nombre));
+    }
+
+    [Fact]
+    public void ExisteNombre_TildeEscritaComoCaracterSeparado_DevuelveTrue()
+    {
+        // "Te" + tilde combinada + " fri" + tilde combinada + "o"
+        Assert.True(_repositorio.ExisteNombre("Te\u0301 fri\u0301o"));
+    }
+
+    [Theory]
+    [InlineData("Te frio")]
+    [InlineData("TE FRIO")]
+    public void ExisteNombre_MismoNombreSinTildes_DevuelveTrue(string nombre)
+    {
+        Assert.True(_repositorio.ExisteNombre(nombre));
+    }
+
     [Fact]
     public void Insertar_ProductoNulo_LanzaArgumentNullException()
     {

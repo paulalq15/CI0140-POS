@@ -78,6 +78,18 @@ public class RegistrarProductoCasoDeUsoTests
     }
 
     [Fact]
+    public void Ejecutar_NombreRepetidoConTildesEnMayusculas_LanzaValidacion()
+    {
+        _casoDeUso.Ejecutar(new RegistrarProductoComando("Café con leche", null, 1500m, 1));
+
+        var excepcion = Assert.Throws<ValidacionException>(
+            () => _casoDeUso.Ejecutar(new RegistrarProductoComando("CAFÉ CON LECHE", null, 1500m, 1)));
+
+        Assert.Contains("Ya existe un producto", excepcion.Message, StringComparison.Ordinal);
+        Assert.Single(_productos.Productos);
+    }
+
+    [Fact]
     public void Ejecutar_CategoriaInexistente_LanzaValidacion()
     {
         var excepcion = Assert.Throws<ValidacionException>(
