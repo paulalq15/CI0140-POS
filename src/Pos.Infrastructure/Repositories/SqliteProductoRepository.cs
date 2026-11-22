@@ -2,6 +2,7 @@ using Microsoft.Data.Sqlite;
 using Pos.Application.Interfaces;
 using Pos.Domain.Entities;
 using Pos.Infrastructure.Persistence;
+using System.Text;
 
 namespace Pos.Infrastructure.Repositories;
 
@@ -64,14 +65,30 @@ public sealed class SqliteProductoRepository : IProductoRepository
         return productos;
     }
 
+    /// <summary>
+    /// Indica si ya existe un producto con el mismo nombre, sin distinguir mayúsculas
+    /// ni la forma en que se escribió la tilde. Se compara en C# porque lower() de
+    /// SQLite solo convierte letras ASCII (por ejemplo, no convierte "É" en "é").
+    /// </summary>
     public bool ExisteNombre(string nombre)
     {
+        var buscado = (nombre ?? string.Empty).Trim().Normalize(NormalizationForm.FormC);
+
         using var conexion = _connectionFactory.CrearConexionAbierta();
         using var comando = conexion.CreateCommand();
-        comando.CommandText = "SELECT EXISTS (SELECT 1 FROM Producto WHERE lower(Nombre) = lower($nombre));";
-        comando.Parameters.AddWithValue("$nombre", nombre ?? string.Empty);
+        comando.CommandText = "SELECT Nombre FROM Producto;";
 
-        return Convert.ToInt64(comando.ExecuteScalar(), System.Globalization.CultureInfo.InvariantCulture) == 1;
+        using var lector = comando.ExecuteReader();
+        while (lector.Read())
+        {
+            var existente = lector.GetString(0).Normalize(NormalizationForm.FormC);
+            if (string.Equals(existente, buscado, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static Producto Mapear(SqliteDataReader lector) => new()
