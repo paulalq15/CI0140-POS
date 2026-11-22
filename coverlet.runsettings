@@ -8,6 +8,7 @@
         <Configuration>
           <Format>cobertura,opencover</Format>
           <Exclude>[Pos.ConsoleApp]*,[Pos.Tests]*</Exclude>
+          <SkipAutoProps>true</SkipAutoProps>
           <ExcludeByAttribute>Obsolete,GeneratedCodeAttribute,CompilerGeneratedAttribute,ExcludeFromCodeCoverageAttribute</ExcludeByAttribute>
         </Configuration>
       </DataCollector>
