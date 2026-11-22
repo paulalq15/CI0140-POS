@@ -3,7 +3,7 @@ using Pos.Domain.Entities;
 namespace Pos.Application.Interfaces;
 
 /// <summary>
-/// Persistencia de ventas (CU-2). Pendiente de implementar en Infrastructure.
+/// Persistencia de ventas (CU-2).
 /// </summary>
 public interface IVentaRepository
 {
