@@ -30,6 +30,6 @@ try
 catch (Exception ex)
 #pragma warning restore CA1031
 {
-    Console.Error.WriteLine("Ocurrió un error inesperado y la aplicación se cerrará. Intente de nuevo o contacte al administrador.");
-    Console.Error.WriteLine($"Detalle técnico (para soporte): {ex.GetType().Name}");
+    await Console.Error.WriteLineAsync("Ocurrió un error inesperado y la aplicación se cerrará. Intente de nuevo o contacte al administrador.");
+    await Console.Error.WriteLineAsync($"Detalle técnico (para soporte): {ex.GetType().Name}");
 }
