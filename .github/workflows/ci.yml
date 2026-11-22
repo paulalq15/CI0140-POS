@@ -12,14 +12,44 @@ jobs:
     name: Compilar, analizar y probar
     runs-on: ubuntu-latest
 
+    env:
+      SONAR_ORGANIZATION: paulalq15
+      SONAR_PROJECT_KEY: paulalq15_CI0140-POS
+
     steps:
       - name: Obtener el código
         uses: actions/checkout@v5
+        with:
+          fetch-depth: 0 # SonarQube necesita el historial completo para detectar el código nuevo
 
       - name: Instalar .NET
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '10.0.x'
+
+      - name: Instalar Java (requerido por el escáner de SonarQube)
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Instalar herramientas
+        run: |
+          dotnet tool install --global dotnet-sonarscanner
+          dotnet tool install --global dotnet-reportgenerator-globaltool
+
+      - name: Iniciar análisis de SonarQube Cloud
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: >
+          dotnet sonarscanner begin
+          /k:"${{ env.SONAR_PROJECT_KEY }}"
+          /o:"${{ env.SONAR_ORGANIZATION }}"
+          /d:sonar.token="$SONAR_TOKEN"
+          /d:sonar.host.url="https://sonarcloud.io"
+          /d:sonar.cs.opencover.reportsPaths="TestResults/**/coverage.opencover.xml"
+          /d:sonar.cs.vstest.reportsPaths="TestResults/**/*.trx"
+          /d:sonar.coverage.exclusions="src/Pos.ConsoleApp/**,tests/**"
 
       - name: Restaurar dependencias
         run: dotnet restore PosCafeteria.slnx
@@ -36,10 +66,15 @@ jobs:
           --results-directory ./TestResults
           --logger "trx;LogFileName=resultados.trx"
 
+      - name: Finalizar análisis de SonarQube Cloud
+        if: always()
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: dotnet sonarscanner end /d:sonar.token="$SONAR_TOKEN"
+
       - name: Generar reporte de cobertura
         if: always()
         run: |
-          dotnet tool install --global dotnet-reportgenerator-globaltool
           reportgenerator -reports:"TestResults/**/coverage.cobertura.xml" -targetdir:"coverage-report" -reporttypes:"Html;MarkdownSummaryGithub"
           cat coverage-report/SummaryGithub.md >> "$GITHUB_STEP_SUMMARY"
 
