@@ -1,0 +1,119 @@
+using Microsoft.Data.Sqlite;
+using Pos.Application.Interfaces;
+using Pos.Domain.Entities;
+using Pos.Infrastructure.Persistence;
+using System.Text;
+using System.Globalization;
+
+namespace Pos.Infrastructure.Repositories;
+
+public sealed class SqliteProductoRepository : IProductoRepository
+{
+    private const string Columnas = "Id, Nombre, Descripcion, Precio, CategoriaId, Activo";
+
+    private readonly SqliteConnectionFactory _connectionFactory;
+
+    public SqliteProductoRepository(SqliteConnectionFactory connectionFactory)
+    {
+        _connectionFactory = connectionFactory ?? throw new ArgumentNullException(nameof(connectionFactory));
+    }
+
+    public int Insertar(Producto producto)
+    {
+        ArgumentNullException.ThrowIfNull(producto);
+
+        using var conexion = _connectionFactory.CrearConexionAbierta();
+        using var comando = conexion.CreateCommand();
+        comando.CommandText = """
+            INSERT INTO Producto (Nombre, Descripcion, Precio, CategoriaId, Activo)
+            VALUES ($nombre, $descripcion, $precio, $categoriaId, $activo)
+            RETURNING Id;
+            """;
+        comando.Parameters.AddWithValue("$nombre", producto.Nombre);
+        comando.Parameters.AddWithValue("$descripcion", producto.Descripcion);
+        comando.Parameters.AddWithValue("$precio", producto.Precio);
+        comando.Parameters.AddWithValue("$categoriaId", producto.CategoriaId);
+        comando.Parameters.AddWithValue("$activo", producto.Activo);
+
+        producto.Id = Convert.ToInt32(comando.ExecuteScalar(), System.Globalization.CultureInfo.InvariantCulture);
+        return producto.Id;
+    }
+
+    public Producto? ObtenerPorId(int id)
+    {
+        using var conexion = _connectionFactory.CrearConexionAbierta();
+        using var comando = conexion.CreateCommand();
+        comando.CommandText = $"SELECT {Columnas} FROM Producto WHERE Id = $id;";
+        comando.Parameters.AddWithValue("$id", id);
+
+        using var lector = comando.ExecuteReader();
+        return lector.Read() ? Mapear(lector) : null;
+    }
+
+    public IReadOnlyList<Producto> ObtenerActivos()
+    {
+        using var conexion = _connectionFactory.CrearConexionAbierta();
+        using var comando = conexion.CreateCommand();
+        comando.CommandText = $"SELECT {Columnas} FROM Producto WHERE Activo = 1 ORDER BY Nombre;";
+
+        using var lector = comando.ExecuteReader();
+        var productos = new List<Producto>();
+        while (lector.Read())
+        {
+            productos.Add(Mapear(lector));
+        }
+
+        return productos;
+    }
+
+    /// <summary>
+    /// Indica si ya existe un producto con el mismo nombre, sin distinguir mayúsculas
+    /// ni tildes ("Té frío", "TE FRIO" y "te frio" se consideran el mismo nombre).
+    /// Se compara en C# porque lower() de SQLite solo convierte letras ASCII.
+    /// </summary>
+    public bool ExisteNombre(string nombre)
+    {
+        var buscado = NormalizarNombre(nombre);
+
+        using var conexion = _connectionFactory.CrearConexionAbierta();
+        using var comando = conexion.CreateCommand();
+        comando.CommandText = "SELECT Nombre FROM Producto;";
+
+        using var lector = comando.ExecuteReader();
+        while (lector.Read())
+        {
+            if (string.Equals(NormalizarNombre(lector.GetString(0)), buscado, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>Quita espacios al inicio y al final y elimina las tildes del nombre.</summary>
+    private static string NormalizarNombre(string? nombre)
+    {
+        var descompuesto = (nombre ?? string.Empty).Trim().Normalize(NormalizationForm.FormD);
+        var sinTildes = new StringBuilder(descompuesto.Length);
+        foreach (var caracter in descompuesto)
+        {
+            if (CharUnicodeInfo.GetUnicodeCategory(caracter) != UnicodeCategory.NonSpacingMark)
+            {
+                sinTildes.Append(caracter);
+            }
+        }
+
+        return sinTildes.ToString().Normalize(NormalizationForm.FormC);
+    }
+
+    private static Producto Mapear(SqliteDataReader lector) => new()
+    {
+        Id = lector.GetInt32(0),
+        Nombre = lector.GetString(1),
+        Descripcion = lector.GetString(2),
+        Precio = lector.GetDecimal(3),
+        CategoriaId = lector.GetInt32(4),
+        Activo = lector.GetBoolean(5),
+    };
+}
