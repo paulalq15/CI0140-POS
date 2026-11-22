@@ -1,0 +1,31 @@
+# Compilación
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+
+# IDEs
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+
+# Pruebas y cobertura
+TestResults/
+coverage-report/
+*.trx
+coverage*.xml
+
+# Base de datos local (se genera al ejecutar)
+*.db
+*.db-shm
+*.db-wal
+
+# SonarQube
+.sonarqube/
+.scannerwork/
+
+# Secretos (RNF-04)
+.env
+appsettings.*.local.json
