@@ -52,3 +52,25 @@ internal sealed class FakeInventarioRepository : IInventarioRepository
     public int ObtenerCantidad(int sucursalId, int productoId) =>
         Items.Find(i => i.SucursalId == sucursalId && i.ProductoId == productoId)?.Cantidad ?? 0;
 }
+
+internal sealed class FakeCajaRepository : ICajaRepository
+{
+    public List<Caja> Cajas { get; } = [];
+
+    public bool ExisteEnSucursal(int sucursalId, int cajaId) =>
+        Cajas.Exists(caja => caja.Id == cajaId && caja.SucursalId == sucursalId);
+
+    public IReadOnlyList<Caja> ObtenerPorSucursal(int sucursalId) =>
+        Cajas.Where(caja => caja.SucursalId == sucursalId).OrderBy(caja => caja.Id).ToList();
+}
+
+internal sealed class FakeVentaRepository : IVentaRepository
+{
+    public List<Venta> Ventas { get; } = [];
+
+    public int RegistrarVenta(Venta venta)
+    {
+        Ventas.Add(venta);
+        return Ventas.Count;
+    }
+}

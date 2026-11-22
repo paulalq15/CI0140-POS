@@ -1,6 +1,7 @@
 using System.Globalization;
 using Pos.Application.CasosDeUso.Inventario;
 using Pos.Application.CasosDeUso.Productos;
+using Pos.Application.CasosDeUso.Ventas;
 using Pos.Domain.Exceptions;
 
 namespace Pos.ConsoleApp;
@@ -13,15 +14,18 @@ public sealed class MenuPrincipal
     private readonly RegistrarProductoCasoDeUso _registrarProducto;
     private readonly ConsultarCatalogoCasoDeUso _consultarCatalogo;
     private readonly ConsultarInventarioCasoDeUso _consultarInventario;
+    private readonly CompletarVentaCasoDeUso _completarVenta;
 
     public MenuPrincipal(
         RegistrarProductoCasoDeUso registrarProducto,
         ConsultarCatalogoCasoDeUso consultarCatalogo,
-        ConsultarInventarioCasoDeUso consultarInventario)
+        ConsultarInventarioCasoDeUso consultarInventario,
+        CompletarVentaCasoDeUso completarVenta)
     {
         _registrarProducto = registrarProducto ?? throw new ArgumentNullException(nameof(registrarProducto));
         _consultarCatalogo = consultarCatalogo ?? throw new ArgumentNullException(nameof(consultarCatalogo));
         _consultarInventario = consultarInventario ?? throw new ArgumentNullException(nameof(consultarInventario));
+        _completarVenta = completarVenta ?? throw new ArgumentNullException(nameof(completarVenta));
     }
 
     public void Ejecutar()
@@ -67,7 +71,7 @@ public sealed class MenuPrincipal
                 ConsultarInventario();
                 break;
             case "4":
-                Console.WriteLine("Pendiente: se implementa en CU-2.");
+                CompletarVenta();
                 break;
             default:
                 Console.WriteLine("Opción no válida. Digite un número del 0 al 4.");
@@ -130,12 +134,7 @@ public sealed class MenuPrincipal
         Console.WriteLine();
         Console.WriteLine("--- Inventario por sucursal ---");
 
-        Console.WriteLine("Sucursales:");
-        foreach (var sucursal in _consultarInventario.ObtenerSucursales())
-        {
-            Console.WriteLine($"  {sucursal.Id}. {sucursal.Nombre}");
-        }
-
+        MostrarSucursales();
         var sucursalId = LectorConsola.LeerEntero("Número de sucursal: ");
         var items = _consultarInventario.Ejecutar(sucursalId);
 
@@ -145,4 +144,136 @@ public sealed class MenuPrincipal
             Console.WriteLine($"{item.NombreProducto,-30} {item.Cantidad,8}");
         }
     }
+
+    private void MostrarSucursales()
+    {
+        Console.WriteLine("Sucursales:");
+        foreach (var sucursal in _consultarInventario.ObtenerSucursales())
+        {
+            Console.WriteLine($"  {sucursal.Id}. {sucursal.Nombre}");
+        }
+    }
+
+    private void MostrarCajasDisponibles(int sucursalId)
+    {
+        var cajas = _completarVenta.ObtenerCajasDisponibles(sucursalId);
+        if (cajas.Count == 0)
+        {
+            Console.WriteLine("Esta sucursal no tiene cajas registradas.");
+            return;
+        }
+
+        Console.WriteLine("Cajas disponibles:");
+        foreach (var caja in cajas)
+        {
+            Console.WriteLine($"  {caja.Id}. {caja.Nombre}");
+        }
+    }
+
+    private void CompletarVenta()
+    {
+        Console.WriteLine();
+        Console.WriteLine("--- Venta en efectivo ---");
+
+        if (LeerSeleccionParaVenta("Número de sucursal (0 para cancelar la venta): ",
+            _completarVenta.ValidarSucursal, MostrarSucursales) is not int sucursalId)
+        {
+            return;
+        }
+
+        if (LeerSeleccionParaVenta("Número de caja (0 para cancelar la venta): ",
+            id => _completarVenta.ValidarCaja(sucursalId, id), () => MostrarCajasDisponibles(sucursalId)) is not int cajaId)
+        {
+            return;
+        }
+
+        var productos = LeerProductosParaVenta(sucursalId);
+        if (productos.Count == 0)
+        {
+            Console.WriteLine("Venta cancelada. No se agregaron productos.");
+            return;
+        }
+
+        CobrarVenta(sucursalId, cajaId, productos);
+    }
+
+    private void CobrarVenta(int sucursalId, int cajaId, IReadOnlyList<ProductoParaVenta> productos)
+    {
+        while (true)
+        {
+            var monto = LectorConsola.LeerDecimal("Efectivo recibido (₡): ");
+            try
+            {
+                var venta = _completarVenta.Ejecutar(new CompletarVentaComando(sucursalId, cajaId, productos, monto));
+                Console.WriteLine($"Venta {venta.Id} registrada. Total: {FormatearImporte(venta.Total)}. Vuelto: {FormatearImporte(venta.Vuelto)}.");
+                return;
+            }
+            catch (ValidacionException ex) when (ex.Campo == nameof(CompletarVentaComando.MontoRecibido))
+            {
+                Console.WriteLine($"Error: {ex.Message}");
+            }
+        }
+    }
+
+    private static int? LeerSeleccionParaVenta(string pregunta, Action<int> validar, Action? mostrarOpciones = null)
+    {
+        while (true)
+        {
+            mostrarOpciones?.Invoke();
+            var id = LectorConsola.LeerEntero(pregunta);
+            if (id == 0)
+            {
+                Console.WriteLine("Venta cancelada.");
+                return null;
+            }
+
+            try
+            {
+                validar(id);
+                return id;
+            }
+            catch (ValidacionException ex)
+            {
+                Console.WriteLine($"Error: {ex.Message}");
+            }
+        }
+    }
+
+    private List<ProductoParaVenta> LeerProductosParaVenta(int sucursalId)
+    {
+        var productos = new List<ProductoParaVenta>();
+        while (true)
+        {
+            var productoId = LectorConsola.LeerEntero("Código de producto (0 para terminar): ");
+            if (productoId == 0)
+            {
+                return productos;
+            }
+
+            try
+            {
+                _completarVenta.ValidarCodigoProducto(productoId);
+            }
+            catch (ValidacionException ex)
+            {
+                Console.WriteLine($"Error: {ex.Message}");
+                continue;
+            }
+
+            var cantidad = LectorConsola.LeerEntero("Cantidad: ");
+            productos.Add(new ProductoParaVenta(productoId, cantidad));
+            try
+            {
+                var total = _completarVenta.CalcularTotal(sucursalId, productos);
+                Console.WriteLine($"Total acumulado: {FormatearImporte(total)}");
+            }
+            catch (ValidacionException ex)
+            {
+                productos.RemoveAt(productos.Count - 1);
+                Console.WriteLine($"Error: {ex.Message}");
+            }
+        }
+    }
+
+    private static string FormatearImporte(decimal importe) => $"₡{importe.ToString("0.############################", FormatoMoneda)}";
 }
