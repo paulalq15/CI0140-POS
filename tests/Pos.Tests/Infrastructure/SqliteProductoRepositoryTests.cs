@@ -90,11 +90,12 @@ public sealed class SqliteProductoRepositoryTests : IDisposable
         Assert.True(_repositorio.ExisteNombre("Te\u0301 fri\u0301o"));
     }
 
-    [Fact]
-    public void ExisteNombre_MismoNombreSinTildes_DevuelveFalse()
+    [Theory]
+    [InlineData("Te frio")]
+    [InlineData("TE FRIO")]
+    public void ExisteNombre_MismoNombreSinTildes_DevuelveTrue(string nombre)
     {
-        // Las tildes sí distinguen nombres: "Te frio" no es igual a "Té frío"
-        Assert.False(_repositorio.ExisteNombre("Te frio"));
+        Assert.True(_repositorio.ExisteNombre(nombre));
     }
 
     [Fact]

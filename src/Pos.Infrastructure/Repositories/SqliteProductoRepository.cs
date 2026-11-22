@@ -3,6 +3,7 @@ using Pos.Application.Interfaces;
 using Pos.Domain.Entities;
 using Pos.Infrastructure.Persistence;
 using System.Text;
+using System.Globalization;
 
 namespace Pos.Infrastructure.Repositories;
 
@@ -67,12 +68,12 @@ public sealed class SqliteProductoRepository : IProductoRepository
 
     /// <summary>
     /// Indica si ya existe un producto con el mismo nombre, sin distinguir mayúsculas
-    /// ni la forma en que se escribió la tilde. Se compara en C# porque lower() de
-    /// SQLite solo convierte letras ASCII (por ejemplo, no convierte "É" en "é").
+    /// ni tildes ("Té frío", "TE FRIO" y "te frio" se consideran el mismo nombre).
+    /// Se compara en C# porque lower() de SQLite solo convierte letras ASCII.
     /// </summary>
     public bool ExisteNombre(string nombre)
     {
-        var buscado = (nombre ?? string.Empty).Trim().Normalize(NormalizationForm.FormC);
+        var buscado = NormalizarNombre(nombre);
 
         using var conexion = _connectionFactory.CrearConexionAbierta();
         using var comando = conexion.CreateCommand();
@@ -81,14 +82,29 @@ public sealed class SqliteProductoRepository : IProductoRepository
         using var lector = comando.ExecuteReader();
         while (lector.Read())
         {
-            var existente = lector.GetString(0).Normalize(NormalizationForm.FormC);
-            if (string.Equals(existente, buscado, StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(NormalizarNombre(lector.GetString(0)), buscado, StringComparison.OrdinalIgnoreCase))
             {
                 return true;
             }
         }
 
         return false;
+    }
+
+    /// <summary>Quita espacios al inicio y al final y elimina las tildes del nombre.</summary>
+    private static string NormalizarNombre(string? nombre)
+    {
+        var descompuesto = (nombre ?? string.Empty).Trim().Normalize(NormalizationForm.FormD);
+        var sinTildes = new StringBuilder(descompuesto.Length);
+        foreach (var caracter in descompuesto)
+        {
+            if (CharUnicodeInfo.GetUnicodeCategory(caracter) != UnicodeCategory.NonSpacingMark)
+            {
+                sinTildes.Append(caracter);
+            }
+        }
+
+        return sinTildes.ToString().Normalize(NormalizationForm.FormC);
     }
 
     private static Producto Mapear(SqliteDataReader lector) => new()
