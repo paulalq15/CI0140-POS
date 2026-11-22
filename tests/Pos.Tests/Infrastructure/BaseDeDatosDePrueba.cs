@@ -28,6 +28,15 @@ internal sealed class BaseDeDatosDePrueba : IDisposable
         comando.ExecuteNonQuery();
     }
 
+    /// <summary>Ejecuta una consulta que devuelve un número para verificar el estado de la BD.</summary>
+    public long ConsultarNumero(string sql)
+    {
+        using var conexion = Factory.CrearConexionAbierta();
+        using var comando = conexion.CreateCommand();
+        comando.CommandText = sql;
+        return Convert.ToInt64(comando.ExecuteScalar(), System.Globalization.CultureInfo.InvariantCulture);
+    }
+
     public void Dispose()
     {
         SqliteConnection.ClearAllPools();
