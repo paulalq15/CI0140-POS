@@ -1,6 +1,7 @@
 using System.Text;
 using Pos.Application.CasosDeUso.Inventario;
 using Pos.Application.CasosDeUso.Productos;
+using Pos.Application.CasosDeUso.Ventas;
 using Pos.ConsoleApp;
 using Pos.Infrastructure.Persistence;
 using Pos.Infrastructure.Repositories;
@@ -18,18 +19,20 @@ try
     var categoriaRepository = new SqliteCategoriaRepository(connectionFactory);
     var inventarioRepository = new SqliteInventarioRepository(connectionFactory);
     var sucursalRepository = new SqliteSucursalRepository(connectionFactory);
+    var cajaRepository = new SqliteCajaRepository(connectionFactory);
+    var ventaRepository = new SqliteVentaRepository(connectionFactory);
 
     var menu = new MenuPrincipal(
         new RegistrarProductoCasoDeUso(productoRepository, categoriaRepository),
         new ConsultarCatalogoCasoDeUso(productoRepository, categoriaRepository),
-        new ConsultarInventarioCasoDeUso(inventarioRepository, sucursalRepository));
+        new ConsultarInventarioCasoDeUso(inventarioRepository, sucursalRepository),
+        new CompletarVentaCasoDeUso(productoRepository, inventarioRepository, sucursalRepository, cajaRepository, ventaRepository));
 
     menu.Ejecutar();
 }
 #pragma warning disable CA1031 // Último recurso: no mostrar detalles internos al usuario (RNF-22)
-catch (Exception ex)
+catch (Exception)
 #pragma warning restore CA1031
 {
     await Console.Error.WriteLineAsync("Ocurrió un error inesperado y la aplicación se cerrará. Intente de nuevo o contacte al administrador.");
-    await Console.Error.WriteLineAsync($"Detalle técnico (para soporte): {ex.GetType().Name}");
 }
