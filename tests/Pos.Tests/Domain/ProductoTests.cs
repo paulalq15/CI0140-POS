@@ -62,7 +62,7 @@ public class ProductoTests
         Assert.Equal(nameof(Producto.Descripcion), excepcion.Campo);
     }
 
-    public static TheoryData<decimal> PreciosInvalidos => [0m, -1m, -1500.50m];
+    public static TheoryData<decimal> PreciosInvalidos => new(0m, -1m, -1500.50m);
 
     [Theory]
     [MemberData(nameof(PreciosInvalidos))]
